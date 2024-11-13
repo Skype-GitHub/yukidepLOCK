@@ -16,7 +16,7 @@ url = requests.get(r'https://raw.githubusercontent.com/mochidukiyukimi/yuki-yout
 version = "1.0"
 apichannels = []
 apicomments = []
-[[apichannels.append(i),apicomments.append(i)] for i in apis]
+
 class APItimeoutError(Exception):
     pass
 
