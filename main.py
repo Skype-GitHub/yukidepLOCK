@@ -87,11 +87,7 @@ template = Jinja2Templates(directory='templates').TemplateResponse
 @app.get("/", response_class=HTMLResponse)
 def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
     adminannounce = requests.get(r'https://ztttas1.github.io/yuki00000000000000000000000000000/AN.txt').text.rstrip()
-    if check_cokie(yuki):
-        response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-        return template("home.html",{"request": request,"ver":ver, "adminannounce": adminannounce,})
-    print(check_cokie(yuki))
-    return redirect("/hcaptcha")
+    return template("home.html",{"request": request,"ver":ver, "adminannounce": adminannounce,})
 
 @app.get('/watch', response_class=HTMLResponse)
 def video(v:str,response: Response,request: Request,yuki: Union[str] = Cookie(None),proxy: Union[str] = Cookie(None)):
