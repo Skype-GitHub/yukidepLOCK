@@ -7,14 +7,7 @@ import random
 import os
 import subprocess
 from cache import cache
-ver = "2.7.1" # バージョン    
-update = "APIサーバーの追加" # アップデート内容
-token = "e4f5c13f-4f31-4ae1-ac5c-b3f1df232073" # hcaptchaのサイトキー
-max_api_wait_time = 3
-max_time = 10
-apis = [f"https://invidious.catspeed.cc/",f"https://youtube.privacyplz.org/",r"https://invidious.jing.rocks/",r"https://inv.nadeko.net/",r"https://invidious.nerdvpn.de/",r"https://invidious.privacyredirect.com/",]
-version = "1.0"
-adminannounce = requests.get(r'https://ztttas1.github.io/yuki00000000000000000000000000000/AN.txt').text.rstrip()
+
 os.system("chmod 777 ./yukiverify")
 # フォーク元:https://github.com/mochidukiyukimi/yuki-youtube-slim-2
 # このyuki:https://github.com/Skype-GitHub/YUKI-GOD
@@ -57,128 +50,6 @@ def apirequest(url):
             apis.remove(api)
     raise APItimeoutError("APIがタイムアウトしました")
 
-def apichannelrequest(url):
-    global apichannels
-    global max_time
-    starttime = time.time()
-    for api in apichannels:
-        if  time.time() - starttime >= max_time -1:
-            break
-        try:
-            res = requests.get(api+url,timeout=max_api_wait_time)
-            if res.status_code == 200 and is_json(res.text):
-                return res.text
-            else:
-                print(f"エラー:{api}")
-                apichannels.append(api)
-                apichannels.remove(api)
-        except:
-            print(f"タイムアウト:{api}")
-            apichannels.append(api)
-            apichannels.remove(api)
-    raise APItimeoutError("APIがタイムアウトしました")
-
-def apicommentsrequest(url):
-    global apicomments
-    global max_time
-    starttime = time.time()
-    for api in apicomments:
-        if  time.time() - starttime >= max_time -1:
-            break
-        try:
-            res = requests.get(api+url,timeout=max_api_wait_time)
-            if res.status_code == 200 and is_json(res.text):
-                return res.text
-            else:
-                print(f"エラー:{api}")
-                apicomments.append(api)
-                apicomments.remove(api)
-        except:
-            print(f"タイムアウト:{api}")
-            apicomments.append(api)
-            apicomments.remove(api)
-    raise APItimeoutError("APIがタイムアウトしました")
-
-
-def get_info(request):
-    global version
-    return json.dumps([version,os.environ.get('RENDER_EXTERNAL_URL'),str(request.scope["headers"]),str(request.scope['router'])[39:-2]])
-
-def get_data(videoid):
-    global logs
-    t = json.loads(apirequest(r"api/v1/videos/"+ urllib.parse.quote(videoid)))
-    return [{"id":i["videoId"],"title":i["title"],"authorId":i["authorId"],"author":i["author"],"viewCount":i["viewCount"]} for i in t["recommendedVideos"]],list(reversed([i["url"] for i in t["formatStreams"]]))[:2],t["descriptionHtml"].replace("\n","<br>"),t["title"],t["authorId"],t["author"],t["authorThumbnails"][-1]["url"]
-def get_data2(videoid):
-    global logs
-    response = apirequest(r"api/v1/videos/" + urllib.parse.quote(videoid))
-    data = json.loads(response)
-    # "viewCountText" を抽出
-    view_count_text = data.get("viewCount")
-    return view_count_text
-def get_like(videoid):
-    global logs
-    response = apirequest(r"api/v1/videos/" + urllib.parse.quote(videoid))
-    data = json.loads(response)
-    # "viewCountText" を抽出
-    view_count_text = data.get("likeCount")
-    return view_count_text
-def get_genre(videoid):
-    global logs
-    response = apirequest(r"api/v1/videos/" + urllib.parse.quote(videoid))
-    data = json.loads(response)
-    # "viewCountText" を抽出
-    view_count_text = data.get("genre")
-    return view_count_text
-
-def get_search(q,page):
-    global logs
-    t = json.loads(apirequest(fr"api/v1/search?q={urllib.parse.quote(q)}&page={page}&hl=jp"))
-    def load_search(i):
-        if i["type"] == "video":
-            return {"title":i["title"],"id":i["videoId"],"authorId":i["authorId"],"author":i["author"],"length":str(datetime.timedelta(seconds=i["lengthSeconds"])),"published":i["publishedText"],"type":"video"}
-        elif i["type"] == "playlist":
-            return {"title":i["title"],"id":i["playlistId"],"thumbnail":i["videos"][0]["videoId"],"count":i["videoCount"],"type":"playlist"}
-        else:
-            if i["authorThumbnails"][-1]["url"].startswith("https"):
-                return {"author":i["author"],"id":i["authorId"],"thumbnail":i["authorThumbnails"][-1]["url"],"type":"channel"}
-            else:
-                return {"author":i["author"],"id":i["authorId"],"thumbnail":r"https://"+i["authorThumbnails"][-1]["url"],"type":"channel"}
-    return [load_search(i) for i in t]
-
-def get_channel(channelid):
-    global apichannels
-    t = json.loads(apichannelrequest(r"api/v1/channels/"+ urllib.parse.quote(channelid)))
-    if t["latestVideos"] == []:
-        print("APIがチャンネルを返しませんでした")
-        apichannels.append(apichannels[0])
-        apichannels.remove(apichannels[0])
-        raise APItimeoutError("APIがチャンネルを返しませんでした")
-    return [[{"title":i["title"],"id":i["videoId"],"authorId":t["authorId"],"author":t["author"],"published":i["publishedText"],"type":"video"} for i in t["latestVideos"]],{"channelname":t["author"],"channelicon":t["authorThumbnails"][-1]["url"],"channelprofile":t["descriptionHtml"]}]
-
-def get_playlist(listid,page):
-    t = json.loads(apirequest(r"/api/v1/playlists/"+ urllib.parse.quote(listid)+"?page="+urllib.parse.quote(page)))["videos"]
-    return [{"title":i["title"],"id":i["videoId"],"authorId":i["authorId"],"author":i["author"],"type":"video"} for i in t]
-
-def get_comments(videoid):
-    t = json.loads(apicommentsrequest(r"api/v1/comments/"+ urllib.parse.quote(videoid)+"?hl=jp"))["comments"]
-    return [{"author":i["author"],"authoricon":i["authorThumbnails"][-1]["url"],"authorid":i["authorId"],"body":i["contentHtml"].replace("\n","<br>")} for i in t]
-
-def get_replies(videoid,key):
-    t = json.loads(apicommentsrequest(fr"api/v1/comments/{videoid}?hmac_key={key}&hl=jp&format=html"))["contentHtml"]
-
-def get_level(word):
-    for i1 in range(1,13):
-        with open(f'Level{i1}.txt', 'r', encoding='UTF-8', newline='\n') as f:
-            if word in [i2.rstrip("\r\n") for i2 in f.readlines()]:
-                return i1
-    return 0
-
-
-def check_cokie(cookie):
-    print(cookie)
-    if cookie == "True":
-        return True
-    return False
 
 def get_verifycode():
     try:
@@ -203,8 +74,6 @@ from typing import Union
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app.mount("/css", StaticFiles(directory="./css"), name="static")
-app.mount("/js", StaticFiles(directory="./js"), name="static")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -226,74 +95,21 @@ def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
 
 @app.get('/watch', response_class=HTMLResponse)
 def video(v:str,response: Response,request: Request,yuki: Union[str] = Cookie(None),proxy: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    response.set_cookie(key="yuki", value="True",max_age=7*24*60*60)
-    videoid = v
-    t = get_data(videoid)
-    t2 = get_data2(videoid)
-    like = get_like(videoid)
-    genre = get_genre(videoid)
-    response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-    return template('video.html', {"request": request,"videoid":videoid,"videourls":t[1],"res":t[0],"description":t[2],"videotitle":t[3],"authorid":t[4],"authoricon":t[6],"author":t[5],"viewCountText":t2,"likeCountText":like,"genre":genre,"proxy":proxy})
-
+    return redirect("/")
 @app.get("/search", response_class=HTMLResponse,)
 def search(q:str,response: Response,request: Request,page:Union[int,None]=1,yuki: Union[str] = Cookie(None),proxy: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-    return template("search.html", {"request": request,"results":get_search(q,page),"word":q,"next":f"/search?q={q}&page={page + 1}","proxy":proxy})
+    return redirect("/")
 
-@app.get("/hashtag/{tag}")
-def search(tag:str,response: Response,request: Request,page:Union[int,None]=1,yuki: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    return redirect(f"/search?q={tag}")
 
 
 @app.get("/channel/{channelid}", response_class=HTMLResponse)
 def channel(channelid:str,response: Response,request: Request,yuki: Union[str] = Cookie(None),proxy: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-    t = get_channel(channelid)
-    return template("channel.html", {"request": request,"results":t[0],"channelname":t[1]["channelname"],"channelicon":t[1]["channelicon"],"channelprofile":t[1]["channelprofile"],"proxy":proxy})
-
-@app.get("/answer", response_class=HTMLResponse)
-def set_cokie(q:str):
-    t = get_level(q)
-    if t > 5:
-        return f"level{t}\n推測を推奨する"
-    elif t == 0:
-        return "level12以上\nほぼ推測必須"
-    return f"level{t}\n覚えておきたいレベル"
+    return redirect("/")
 
 @app.get("/playlist", response_class=HTMLResponse)
 def playlist(list:str,response: Response,request: Request,page:Union[int,None]=1,yuki: Union[str] = Cookie(None),proxy: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-    return template("search.html", {"request": request,"results":get_playlist(list,str(page)),"word":"","next":f"/playlist?list={list}","proxy":proxy})
+    return redirect("/")
 
-@app.get("/info", response_class=HTMLResponse)
-def viewlist(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    global apis,apichannels,apicomments
-    if not(check_cokie(yuki)):
-        return redirect("/")
-    response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-    return template("info.html",{"request": request,"Youtube_API":apis[0],"Channel_API":apichannels[0],"Comments_API":apicomments[0]})
-
-@app.get("/suggest")
-def suggest(keyword:str):
-    return [i[0] for i in json.loads(requests.get(r"http://www.google.com/complete/search?client=youtube&hl=ja&ds=yt&q="+urllib.parse.quote(keyword)).text[19:-1])[1]]
-
-@app.get("/comments")
-def comments(request: Request,v:str):
-    return template("comments.html",{"request": request,"comments":get_comments(v)})
-
-@app.get("/thumbnail")
-def thumbnail(v:str):
-    return Response(content = requests.get(fr"https://img.youtube.com/vi/{v}/0.jpg").content,media_type=r"image/jpeg")
 
 @app.get("/bbs",response_class=HTMLResponse)
 def view_bbs(request: Request,name: Union[str, None] = "",seed:Union[str,None]="",channel:Union[str,None]="main",verify:Union[str,None]="false",yuki: Union[str] = Cookie(None)):
@@ -347,43 +163,7 @@ def page(request: Request,__):
 def APIwait(request: Request,exception: APItimeoutError):
     return template("APIwait.html",{"request": request},status_code=500)
 
-@app.get("/updateinfo", response_class=HTMLResponse)
-def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if check_cokie(yuki):
-        response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-        return template("apd1.html",{"request": request,"ver":ver,"update":update})
-    print(check_cokie(yuki))
-    return redirect("/")
 
-
-@app.get("/build", response_class=HTMLResponse)
-def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if check_cokie(yuki):
-        response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-        return template("build.html",{"request": request})
-    print(check_cokie(yuki))
-    return redirect("/")
-@app.get("/qa", response_class=HTMLResponse)
-def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if check_cokie(yuki):
-        response.set_cookie("yuki","True",max_age=60 * 60 * 24 * 7)
-        return template("qanda.html",{"request": request})
-    print(check_cokie(yuki))
-    return redirect("/")
-
-
-@app.get("/hcaptcha", response_class=HTMLResponse)
-def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if (check_cokie(yuki)):
-     return redirect("/")
-    return template("hcaptcha.html",{"request": request,"token": token})
 @app.get("/word", response_class=HTMLResponse)
 def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if (check_cokie(yuki)):
-     return redirect("/")
-    return template("word2.html",{"request": request})
-@app.get("/like", response_class=HTMLResponse)
-def home(response: Response,request: Request,yuki: Union[str] = Cookie(None)):
-    if not(check_cokie(yuki)):
-     return redirect("/")
-    return template("okini.html",{"request": request})
+    return redirect("/")
